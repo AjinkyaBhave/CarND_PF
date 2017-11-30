@@ -28,9 +28,10 @@ struct Particle {
 class ParticleFilter {
 	
 	// Number of particles to draw
-	int num_particles; 
+	int n_particles; 
 	
-	
+	// State space dimension
+	int n_states;
 	
 	// Flag, if filter is initialized
 	bool is_initialized;
@@ -45,7 +46,7 @@ public:
 
 	// Constructor
 	// @param num_particles Number of particles
-	ParticleFilter() : num_particles(0), is_initialized(false) {}
+	ParticleFilter() : n_particles(100), n_states(3), is_initialized(false) {}
 
 	// Destructor
 	~ParticleFilter() {}

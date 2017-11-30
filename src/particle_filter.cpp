@@ -20,10 +20,27 @@
 using namespace std;
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
-	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
-	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
+	// Set the number of particles. Initialize all particles to first position (based on estimates of 
+	// x, y, theta and their uncertainties from GPS) and all weights to 1. 
 	// Add random Gaussian noise to each particle.
-	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
+	// Number of particles in filter
+	n_particles = 100;
+	// Random number generator for Gaussian distribution
+	default_random_engine rand_gen;
+	// Gaussian distribution for x, y and theta
+	normal_distribution<double> dist_x(x, std[0]);
+	normal_distribution<double> dist_y(y, std[1]);
+	normal_distribution<double> dist_theta(theta, std[2]);
+	// Temporary class to store particle initial data
+	Particle p;
+	
+	for (int i=0; i<n_particles; i++){
+		p.x = dist_x(rand_gen);
+		p.y = dist_y(rand_gen);
+		p.theta = dist_theta(rand_gen);
+		p.id = i;
+		p.weight = 1;
+	}
 
 }
 
@@ -32,7 +49,9 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
-
+	// Temporary variables to store random pose for a particle
+	int x_p, y_p, theta_p;
+	
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
