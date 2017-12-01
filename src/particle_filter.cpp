@@ -19,38 +19,53 @@
 
 using namespace std;
 
-void ParticleFilter::init(double x, double y, double theta, double std[]) {
-	// Set the number of particles. Initialize all particles to first position (based on estimates of 
-	// x, y, theta and their uncertainties from GPS) and all weights to 1. 
-	// Add random Gaussian noise to each particle.
+void ParticleFilter::init(double x, double y, double theta, double std_pos[]) {
 	// Number of particles in filter
 	n_particles = 100;
 	// Random number generator for Gaussian distribution
 	default_random_engine rand_gen;
 	// Gaussian distribution for x, y and theta
-	normal_distribution<double> dist_x(x, std[0]);
-	normal_distribution<double> dist_y(y, std[1]);
-	normal_distribution<double> dist_theta(theta, std[2]);
+	normal_distribution<double> dist_x(x, std_pos[0]);
+	normal_distribution<double> dist_y(y, std_pos[1]);
+	normal_distribution<double> dist_theta(theta, std_pos[2]);
 	// Temporary class to store particle initial data
 	Particle p;
-	
+	// Initialize all particles to first position (based on estimates of 
+	// x, y, theta and their uncertainties from GPS) and all weights to 1. 
+	// Add random Gaussian noise to each particle.
 	for (int i=0; i<n_particles; i++){
 		p.x = dist_x(rand_gen);
 		p.y = dist_y(rand_gen);
 		p.theta = dist_theta(rand_gen);
 		p.id = i;
 		p.weight = 1;
+		particles.push_back(p);
 	}
-
+	// Filter state is now initialised
+	is_initialized = true;
+	cout << "Particle number is " << particles.size() << endl; 
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) {
-	// TODO: Add measurements to each particle and add random Gaussian noise.
-	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
-	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
-	//  http://www.cplusplus.com/reference/random/default_random_engine/
-	// Temporary variables to store random pose for a particle
-	int x_p, y_p, theta_p;
+	// Add measurements to each particle and add random Gaussian noise.
+	// Random number generator for Gaussian distribution
+	default_random_engine rand_gen;
+	// Gaussian distribution for x, y and theta
+	normal_distribution<double> dist_x(0, std_pos[0]);
+	normal_distribution<double> dist_y(0, std_pos[1]);
+	normal_distribution<double> dist_theta(0, std_pos[2]);
+	
+	for (int i=0; i<particles.size(); i++){
+		// Predict next state using bicycle model 
+		particles[i].x = particles[i].x + (velocity/yaw_rate)*(sin(particles[i].theta+yaw_rate*delta_t) - sin(particles[i].theta));
+		particles[i].y = particles[i].y + (velocity/yaw_rate)*(cos(particles[i].theta) - cos(particles[i].theta+yaw_rate*delta_t));
+		particles[i].theta = particles[i].theta + yaw_rate*delta_t;
+		
+		// Add Gaussian noise to state
+		particles[i].x = particles[i].x + dist_x(rand_gen);
+		particles[i].y = particles[i].y + dist_y(rand_gen);
+		particles[i].theta = particles[i].theta + dist_theta(rand_gen);	
+	}
 	
 }
 
