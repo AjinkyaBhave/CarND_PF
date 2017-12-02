@@ -80,43 +80,52 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
 		const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
-	// TODO: Update the weights of each particle using a multi-variate Gaussian distribution. You can read
-	//   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
-	// NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
-	//   according to the MAP'S coordinate system. You will need to transform between the two systems.
-	//   Keep in mind that this transformation requires both rotation AND translation (but no scaling).
-	//   The following is a good resource for the theory:
-	//   https://www.willamette.edu/~gorr/classes/GeneralGraphics/Transforms/transforms2d.htm
-	//   and the following is a good resource for the actual equation to implement (look at equation 
-	//   3.33
-	//   http://planning.cs.uiuc.edu/node99.html
-	std::vector<LandmarkObs> predicted;
-	LandmarkObs tempObs;
-	double min_obs_error;
-	double obs_error;
-	int id;
+	// Update the weights of each particle using a multi-variate Gaussian distribution. 
+	// The observations are given in the VEHICLE'S coordinate system. Your particles are located
+	// according to the MAP'S coordinate system. You will need to transform between the two systems.
 	
-	for(int i=0; i<particles.size(); i++){
+	// Store detected landmarks within sensor range for a particle
+	std::vector<LandmarkObs> predicted;
+	// Temporary landmark data storage
+	LandmarkObs temp_obs;
+	// Temporary variables for distance error between observation and landmark
+	double min_obs_error = sensor_range;
+	double obs_error = sensor_range;
+	int id = 0;
+	// Multi-variate gaussian probability of all observations given particle pose
+	double posterior_prob = 1;
+	
+	// Associate each particle with correct observed landmarks
+	for(int i=0; i<particles.size(); i++)
+	{
+		// Empty list for current particle
 		predicted.clear();
-		for(int j=0; j<observations.size();j++){
-			tempObs.x = particles[i].x + cos(particles[i].theta)*observations[i].x - sin(particles[i].theta)*observations[i].y;
-			tempObs.y = particles[i].y + sin(particles[i].theta)*observations[i].x + cos(particles[i].theta)*observations[i].y;
+		// Initialise for weight calculation later
+		posterior_prob = 1;
+		for(int j=0; j<observations.size();j++)
+		{
+			// Convert from vehicle to world coordinate frame
+			temp_obs.x = particles[i].x + cos(particles[i].theta)*observations[j].x - sin(particles[i].theta)*observations[j].y;
+			temp_obs.y = particles[i].y + sin(particles[i].theta)*observations[j].x + cos(particles[i].theta)*observations[j].y;
 			min_obs_error = sensor_range;
-			for(int k=0; k<map_landmarks.landmark_list.size(); k++){
-				obs_error = (map_landmarks.landmark_list[i].x_f-tempObs.x)*(map_landmarks.landmark_list[i].x_f-tempObs.x);
-				obs_error += (map_landmarks.landmark_list[i].y_f-tempObs.y)*(map_landmarks.landmark_list[i].y_f-tempObs.y);
-				obs_error = sqrt(obs_error);
-				if(obs_error < min_obs_error){
-					min_obs_error = obs_error;
-					id = map_landmarks.landmark_list[i].id_i;
-				}
-			}
-			tempObs.id = id;
-			predicted.push_back(tempObs);
-			
-		}
-		
-	}
+			for(int k=0; k<map_landmarks.landmark_list.size(); k++)
+			{
+				if(dist(map_landmarks.landmark_list[k].x_f, map_landmarks.landmark_list[k].y_f, particles[i].x, particles[i].y) <= sensor_range){
+					obs_error = dist(map_landmarks.landmark_list[k].x_f, map_landmarks.landmark_list[k].y_f, temp_obs.x, temp_obs.y); 
+					if(obs_error < min_obs_error)
+					{
+						min_obs_error = obs_error;
+						id = map_landmarks.landmark_list[k].id_i;
+					} //if()
+				} // if()				
+			} // for()
+			temp_obs.id = id;
+			predicted.push_back(temp_obs);
+			posterior_prob *= gaussian(temp_obs, map_landmarks.landmark_list[id-1], std_landmark);
+		} // for()
+		// Assign posterior probability of all observations as weight of particle
+		particles[i].weight = posterior_prob;		
+	} //for()
 	
 }
 
