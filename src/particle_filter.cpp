@@ -21,7 +21,7 @@ using namespace std;
 
 void ParticleFilter::init(double x, double y, double theta, double std_pos[]) {
 	// Number of particles in filter
-	n_particles = 2;
+	n_particles = 100;
 	// Define maximum size for particles and weights vectors
 	particles.reserve(n_particles);
 	weights.reserve(n_particles);
@@ -63,17 +63,23 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	normal_distribution<double> dist_theta(0, std_pos[2]);
 	
 	for (int i=0; i<particles.size(); i++){
-		// Predict next state using bicycle model 
-		particles[i].x = particles[i].x + (velocity/yaw_rate)*(sin(particles[i].theta+yaw_rate*delta_t) - sin(particles[i].theta));
-		particles[i].y = particles[i].y + (velocity/yaw_rate)*(cos(particles[i].theta) - cos(particles[i].theta+yaw_rate*delta_t));
-		particles[i].theta = particles[i].theta + yaw_rate*delta_t;
+		// Predict next state using bicycle model with large yaw rate
+		if(fabs(yaw_rate) > 0.0001){
+			particles[i].x = particles[i].x + (velocity/yaw_rate)*(sin(particles[i].theta+yaw_rate*delta_t) - sin(particles[i].theta));
+			particles[i].y = particles[i].y + (velocity/yaw_rate)*(cos(particles[i].theta) - cos(particles[i].theta+yaw_rate*delta_t));
+			particles[i].theta = particles[i].theta + yaw_rate*delta_t;	
+		}
+		// Vehicle is going in a straight line
+		else{
+			particles[i].x = particles[i].x + velocity*delta_t*cos(particles[i].theta);
+			particles[i].y = particles[i].y + velocity*delta_t*sin(particles[i].theta);
+		}
 		
 		// Add Gaussian noise to state
 		particles[i].x = particles[i].x + dist_x(rand_gen);
 		particles[i].y = particles[i].y + dist_y(rand_gen);
 		particles[i].theta = particles[i].theta + dist_theta(rand_gen);	
 	}
-	
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
@@ -101,7 +107,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	// Multi-variate gaussian probability of all observations given particle pose
 	double posterior_prob = 1;
 	// Sum of all weights for normalisation
-	double sum_weights = 0;
+	//double sum_weights = 0;
 	
 	// Associate each particle with correct observed landmarks
 	for(int i=0; i<particles.size(); i++)
@@ -134,12 +140,10 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		// Assign posterior probability of all observations as weight of particle
 		particles[i].weight = posterior_prob;
 		weights[i] = particles[i].weight;		
-		sum_weights = sum_weights + particles[i].weight;
-		cout << " i " << i << " weight " << weights[i] << endl;
+		//sum_weights = sum_weights + particles[i].weight;
 	} //for()
-	//cout << "updateWeights() \n";
 
-	/*// Normalise particle weights to create valid probability distribution
+		/*// Normalise particle weights to create valid probability distribution
 	for (int i=0;i<particles.size();i++){
 		particles[i].weight = particles[i].weight/sum_weights;
 		weights[i] = particles[i].weight;
@@ -157,8 +161,6 @@ void ParticleFilter::resample() {
 	std::discrete_distribution<> discrete_prob(weights.begin(), weights.end());
 	// Vector of new particles drawn with replacement based on weights
 	std::vector<Particle> new_particles(n_particles);
-	//new_particles.reserve(n_particles);
-	//cout << "init new size " << new_particles.size() << endl;
 	// Index of sampled particle
 	int idx;
 	
@@ -168,9 +170,7 @@ void ParticleFilter::resample() {
 		//new_particles.push_back(particles[idx]);
 		new_particles[i] = particles[idx];
 	}
-	//cout << "new size " << new_particles.size() << endl;
 	particles = new_particles;
-	//cout << "size " << particles.size() << endl;
 }
 
 Particle ParticleFilter::SetAssociations(Particle& particle, const std::vector<int>& associations, 
