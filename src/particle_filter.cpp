@@ -21,9 +21,13 @@ using namespace std;
 
 void ParticleFilter::init(double x, double y, double theta, double std_pos[]) {
 	// Number of particles in filter
-	n_particles = 100;
+	n_particles = 2;
+	// Define maximum size for particles and weights vectors
+	particles.reserve(n_particles);
+	weights.reserve(n_particles);
 	// Random number generator for Gaussian distribution
-	default_random_engine rand_gen;
+	std::random_device rand_dev;
+	std::mt19937 rand_gen(rand_dev());
 	// Gaussian distribution for x, y and theta
 	normal_distribution<double> dist_x(0, std_pos[0]);
 	normal_distribution<double> dist_y(0, std_pos[1]);
@@ -41,6 +45,7 @@ void ParticleFilter::init(double x, double y, double theta, double std_pos[]) {
 		p.id = i;
 		p.weight = 1;
 		particles.push_back(p);
+		weights.push_back(p.weight);
 	}
 	// Filter state is now initialised
 	is_initialized = true;
@@ -50,7 +55,8 @@ void ParticleFilter::init(double x, double y, double theta, double std_pos[]) {
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) {
 	// Add measurements to each particle and add random Gaussian noise.
 	// Random number generator for Gaussian distribution
-	default_random_engine rand_gen;
+	std::random_device rand_dev;
+	std::mt19937 rand_gen(rand_dev());
 	// Gaussian distribution for x, y and theta
 	normal_distribution<double> dist_x(0, std_pos[0]);
 	normal_distribution<double> dist_y(0, std_pos[1]);
@@ -94,6 +100,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	int id = 0;
 	// Multi-variate gaussian probability of all observations given particle pose
 	double posterior_prob = 1;
+	// Sum of all weights for normalisation
+	double sum_weights = 0;
 	
 	// Associate each particle with correct observed landmarks
 	for(int i=0; i<particles.size(); i++)
@@ -124,16 +132,45 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			posterior_prob *= gaussian(temp_obs, map_landmarks.landmark_list[id-1], std_landmark);
 		} // for()
 		// Assign posterior probability of all observations as weight of particle
-		particles[i].weight = posterior_prob;		
+		particles[i].weight = posterior_prob;
+		weights[i] = particles[i].weight;		
+		sum_weights = sum_weights + particles[i].weight;
+		cout << " i " << i << " weight " << weights[i] << endl;
 	} //for()
+	//cout << "updateWeights() \n";
+
+	/*// Normalise particle weights to create valid probability distribution
+	for (int i=0;i<particles.size();i++){
+		particles[i].weight = particles[i].weight/sum_weights;
+		weights[i] = particles[i].weight;
+	}*/
 	
 }
 
 void ParticleFilter::resample() {
-	// TODO: Resample particles with replacement with probability proportional to their weight. 
-	// NOTE: You may find std::discrete_distribution helpful here.
-	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
-
+	//Resample particles with replacement with probability proportional to their weights. 
+	
+	// Random number generator for discrete weighted distribution
+	std::random_device rand_dev;
+	std::mt19937 rand_gen(rand_dev());
+	// Create a discrete distribution with particle weights
+	std::discrete_distribution<> discrete_prob(weights.begin(), weights.end());
+	// Vector of new particles drawn with replacement based on weights
+	std::vector<Particle> new_particles(n_particles);
+	//new_particles.reserve(n_particles);
+	//cout << "init new size " << new_particles.size() << endl;
+	// Index of sampled particle
+	int idx;
+	
+	for (int i=0;i<n_particles;i++)
+	{
+		idx = discrete_prob(rand_gen);
+		//new_particles.push_back(particles[idx]);
+		new_particles[i] = particles[idx];
+	}
+	//cout << "new size " << new_particles.size() << endl;
+	particles = new_particles;
+	//cout << "size " << particles.size() << endl;
 }
 
 Particle ParticleFilter::SetAssociations(Particle& particle, const std::vector<int>& associations, 

@@ -59,9 +59,9 @@ inline double dist(double x1, double y1, double x2, double y2) {
 }
 
 inline double gaussian(LandmarkObs obs, Map::single_landmark_s lm, double std[]){
-	double normaliser = 1/(2*M_PI*std[0]*std[1]);
+	double norm = 1/(2*M_PI*std[0]*std[1]);
 	double exponent = -0.5*( pow(obs.x-lm.x_f,2)/pow(std[0],2) + pow(obs.y-lm.y_f,2)/pow(std[1],2) );
-	return normaliser*exp(exponent);
+	return norm*exp(exponent);
 }
 inline double * getError(double gt_x, double gt_y, double gt_theta, double pf_x, double pf_y, double pf_theta) {
 	static double error[3];
